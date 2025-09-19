@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:gerenciamento_sol/data/database.dart';
 import 'package:gerenciamento_sol/main.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gerenciamento_sol/providers.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
+    final database = ref.watch(databaseProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Categorias Fixas')),
       body: Padding(

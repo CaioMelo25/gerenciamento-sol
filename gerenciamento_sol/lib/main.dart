@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gerenciamento_sol/data/database.dart';
 import 'package:gerenciamento_sol/presentation/home/home_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-late final AppDatabase database;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  database = AppDatabase();
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
