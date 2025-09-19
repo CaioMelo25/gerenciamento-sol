@@ -1,10 +1,30 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 part 'database.g.dart';
+
+class SaldoCategoriaResult {
+  final String nomeCategoria;
+  final double saldo;
+
+  SaldoCategoriaResult({required this.nomeCategoria, required this.saldo});
+
+  @override
+  String toString() {
+    return 'SaldoCategoriaResult(nome: $nomeCategoria, saldo: ${saldo.toStringAsFixed(2)})';
+  }
+}
+
+class _LancamentoComCategoria {
+  final String categoriaNome;
+  final String tipo;
+  final double valor;
+  _LancamentoComCategoria({required this.categoriaNome, required this.tipo, required this.valor});
+}
 
 class Categorias extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -26,6 +46,66 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  @override
+  Future<void> onCreate(Migrator m) async {
+    await m.createAll();
+
+    final categoriasIniciais = [
+      'Hidratantes', 'Perfumes', 'Maquiagens',
+      'Sabonetes', 'Infantil', 'Outros'
+    ];
+
+    for (final nomeCategoria in categoriasIniciais) {
+      await into(categorias).insert(CategoriasCompanion.insert(nome: nomeCategoria));
+    }
+  }
+
+  Future<void> adicionarLancamento(LancamentosCompanion entrada) {
+    return into(lancamentos).insert(entrada);
+  }
+
+  Future<void> limparLancamentos() {
+    return delete(lancamentos).go();
+  }
+
+  Future<double> _getTotalPorTipo(int ano, int mes, String tipo) async {
+    final totalExp = lancamentos.valor.sum();
+    final query = selectOnly(lancamentos)
+      ..addColumns([totalExp])
+      ..where(lancamentos.tipo.equals(tipo))
+      ..where(lancamentos.data.year.equals(ano))
+      ..where(lancamentos.data.month.equals(mes));
+    final result = await query.getSingle();
+    return result?.read(totalExp) ?? 0.0;
+  }
+
+  Future<double> getTotalVendas(int ano, int mes) => _getTotalPorTipo(ano, mes, 'venda');
+  Future<double> getTotalCompras(int ano, int mes) => _getTotalPorTipo(ano, mes, 'compra');
+
+  Future<double> getSaldoDoMes(int ano, int mes) async {
+    final totalVendas = await getTotalVendas(ano, mes);
+    final totalCompras = await getTotalCompras(ano, mes);
+    return totalVendas - totalCompras;
+  }
+
+  Future<List<SaldoCategoriaResult>> getSaldoPorCategoria(int ano, int mes) async {
+    final todasCategorias = await select(categorias).get();
+    final mapaDeCategorias = { for (var c in todasCategorias) c.id: c.nome };
+    final queryLancamentos = select(lancamentos)
+      ..where((tbl) => tbl.data.year.equals(ano))
+      ..where((tbl) => tbl.data.month.equals(mes));
+    final listaDeLancamentos = await queryLancamentos.get();
+    final saldos = <String, double>{};
+    for (final lancamento in listaDeLancamentos) {
+      final nomeCategoria = mapaDeCategorias[lancamento.categoriaId];
+      if (nomeCategoria != null) {
+        final valorComSinal = lancamento.tipo == 'venda' ? lancamento.valor : -lancamento.valor;
+        saldos[nomeCategoria] = (saldos[nomeCategoria] ?? 0) + valorComSinal;
+      }
+    }
+    return saldos.entries.map((e) => SaldoCategoriaResult(nomeCategoria: e.key, saldo: e.value)).toList();
+  }
 }
 
 LazyDatabase _openConnection() {
