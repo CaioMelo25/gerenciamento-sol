@@ -124,6 +124,11 @@ Stream<DashboardData> watchDashboardData(int ano, int mes) {
 
   return streamDeMudancas.asyncMap((_) => getDashboardData(ano, mes));
 }
+
+Stream<List<SaldoCategoriaResult>> watchSaldoPorCategoria(int ano, int mes) {
+  return select(lancamentos).watch().asyncMap((_) => getSaldoPorCategoria(ano, mes));
+}
+
 }
 
 LazyDatabase _openConnection() {

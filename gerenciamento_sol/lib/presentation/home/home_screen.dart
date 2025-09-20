@@ -4,6 +4,7 @@ import 'package:gerenciamento_sol/data/database.dart';
 import 'package:gerenciamento_sol/presentation/transactions/add_transaction_screen.dart';
 import 'package:gerenciamento_sol/providers.dart';
 import 'package:intl/intl.dart';
+import 'package:gerenciamento_sol/presentation/reports/reports_screen.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -24,6 +25,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gerenciamento Sol'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.assessment_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const ReportsScreen()),
+              );
+            },
+            tooltip: 'Relatórios',
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
