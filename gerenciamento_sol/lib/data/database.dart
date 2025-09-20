@@ -106,6 +106,24 @@ class AppDatabase extends _$AppDatabase {
     }
     return saldos.entries.map((e) => SaldoCategoriaResult(nomeCategoria: e.key, saldo: e.value)).toList();
   }
+
+  Future<DashboardData> getDashboardData(int ano, int mes) async {
+  final vendas = await getTotalVendas(ano, mes);
+  final compras = await getTotalCompras(ano, mes);
+  final saldo = await getSaldoDoMes(ano, mes);
+
+  return DashboardData(
+    totalVendas: vendas,
+    totalCompras: compras,
+    saldoDoMes: saldo,
+  );
+}
+
+Stream<DashboardData> watchDashboardData(int ano, int mes) {
+  final streamDeMudancas = select(lancamentos).watch();
+
+  return streamDeMudancas.asyncMap((_) => getDashboardData(ano, mes));
+}
 }
 
 LazyDatabase _openConnection() {
@@ -113,5 +131,17 @@ LazyDatabase _openConnection() {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'db.sqlite'));
     return NativeDatabase(file);
+  });
+}
+
+class DashboardData {
+  final double totalVendas;
+  final double totalCompras;
+  final double saldoDoMes;
+
+  DashboardData({
+    required this.totalVendas,
+    required this.totalCompras,
+    required this.saldoDoMes,
   });
 }

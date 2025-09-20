@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:gerenciamento_sol/data/database.dart';
-import 'package:gerenciamento_sol/presentation/home/home_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:gerenciamento_sol/presentation/home/home_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
+  initializeDateFormatting('pt_BR', null);
+  
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProviderScope(child: MyApp()));
 }
