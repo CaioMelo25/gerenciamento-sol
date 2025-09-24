@@ -23,7 +23,7 @@ O aplicativo conta com um ciclo completo de funcionalidades para gestão finance
 * **🎨 Gráficos Visuais:** Gráficos de pizza que mostram a distribuição de entradas e gastos por categoria, facilitando a análise.
 * **📱 Design Responsivo:** Interface limpa e funcional que se adapta a diferentes tamanhos de tela.
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 A stack utilizada foi escolhida para criar uma aplicação moderna, performática e de fácil manutenção:
 
@@ -36,7 +36,7 @@ A stack utilizada foi escolhida para criar uma aplicação moderna, performátic
 * **Geração de Ícones:** [flutter_launcher_icons](https://pub.dev/packages/flutter_launcher_icons)
 * **Prototipação e Design:** [Figma](https://www.figma.com/)
 
-## 🚀 Como Executar o Projeto
+## Como Executar o Projeto
 
 Para executar este projeto localmente, siga os passos abaixo:
 
@@ -70,7 +70,7 @@ Para executar este projeto localmente, siga os passos abaixo:
 
 Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
-## 💬 Contato
+## Contato
 
 **Caio Melo**
 
