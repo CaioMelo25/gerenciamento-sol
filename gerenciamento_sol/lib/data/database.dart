@@ -138,6 +138,24 @@ Future<List<int>> getAnosComLancamentos() async {
   return anos;
 }
 
+Future<int> deletarLancamento(int id) {
+  return (delete(lancamentos)..where((tbl) => tbl.id.equals(id))).go();
+}
+
+Future<bool> atualizarLancamento(LancamentosCompanion entrada) {
+  return update(lancamentos).replace(entrada);
+}
+
+Stream<List<Lancamento>> watchLancamentosPorCategoria(int ano, int mes, int categoriaId) {
+  final query = select(lancamentos)
+    ..where((tbl) => tbl.data.year.equals(ano))
+    ..where((tbl) => tbl.data.month.equals(mes))
+    ..where((tbl) => tbl.categoriaId.equals(categoriaId))
+    ..orderBy([(tbl) => OrderingTerm.desc(tbl.data)]);
+
+  return query.watch();
+}
+
 }
 
 
