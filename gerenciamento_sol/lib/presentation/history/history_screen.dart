@@ -38,43 +38,71 @@ class HistoryScreen extends ConsumerWidget {
               final item = lancamentos[index];
               final lancamento = item.lancamento;
               final categoria = item.categoria;
-
+              
               final isVenda = lancamento.tipo == 'venda';
               final cor = isVenda ? Colors.green : Colors.red;
 
+              // ===== A MUDANÇA ESTÁ AQUI: TROCAMOS O LISTTILE POR ESTE CARD CUSTOMIZADO =====
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ListTile(
-                  leading: Icon(
-                    isVenda ? Icons.arrow_upward : Icons.arrow_downward,
-                    color: cor,
-                  ),
-                  title: Text(
-                    categoria.nome,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(formatadorData.format(lancamento.data)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
                     children: [
-                      Text(
-                        formatadorMoeda.format(lancamento.valor),
-                        style: TextStyle(color: cor, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => AddTransactionScreen(lancamentoParaEditar: lancamento),
+                      // Ícone da Esquerda
+                      Icon(isVenda ? Icons.arrow_upward : Icons.arrow_downward, color: cor, size: 28),
+                      const SizedBox(width: 12),
+
+                      // Coluna Central que se expande para ocupar o espaço
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              categoria.nome,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              overflow: TextOverflow.ellipsis, // Evita quebra de linha se o nome for muito grande
                             ),
-                          );
-                        },
+                            Text(
+                              formatadorData.format(lancamento.data),
+                              style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontSize: 14),
+                            ),
+                          ],
+                        ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline, size: 20, color: Theme.of(context).colorScheme.error),
-                        onPressed: () => _confirmarExclusao(context, database, lancamento.id),
+                      const SizedBox(width: 12),
+
+                      // Coluna da Direita com valor e botões
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            formatadorMoeda.format(lancamento.valor),
+                            style: TextStyle(color: cor, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                constraints: const BoxConstraints(), // Remove padding extra
+                                padding: const EdgeInsets.all(4),
+                                icon: const Icon(Icons.edit_outlined, size: 20),
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => AddTransactionScreen(lancamentoParaEditar: lancamento),
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                constraints: const BoxConstraints(), // Remove padding extra
+                                padding: const EdgeInsets.all(4),
+                                icon: Icon(Icons.delete_outline, size: 20, color: Theme.of(context).colorScheme.error),
+                                onPressed: () => _confirmarExclusao(context, database, lancamento.id),
+                              ),
+                            ],
+                          )
+                        ],
                       ),
                     ],
                   ),

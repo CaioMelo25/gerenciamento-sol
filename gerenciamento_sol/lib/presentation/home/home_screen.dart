@@ -204,7 +204,8 @@ class _DashboardCard extends StatelessWidget {
     final titleStyle = textTheme.titleMedium?.copyWith(
       color: Theme.of(context).colorScheme.secondary,
     );
-    final valueStyle = (isTotal ? textTheme.headlineMedium : textTheme.headlineSmall)?.copyWith(
+    final valueStyle = (isTotal ? textTheme.headlineMedium : textTheme.headlineSmall)
+        ?.copyWith(
       fontWeight: FontWeight.bold,
       color: isTotal ? Theme.of(context).colorScheme.primary : iconColor,
     );
@@ -223,7 +224,11 @@ class _DashboardCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(value, style: valueStyle),
+            
+            FittedBox(
+              fit: BoxFit.scaleDown, 
+              child: Text(value, style: valueStyle),
+            ),
           ],
         ),
       ),
