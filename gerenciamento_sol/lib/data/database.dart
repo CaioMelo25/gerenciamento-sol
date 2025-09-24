@@ -7,6 +7,23 @@ import 'package:path/path.dart' as p;
 
 part 'database.g.dart';
 
+class TransacaoPorCategoriaResult {
+  final String nomeCategoria;
+  final double total;
+
+  TransacaoPorCategoriaResult({required this.nomeCategoria, required this.total});
+}
+
+class LancamentoComCategoria {
+  final Lancamento lancamento;
+  final Categoria categoria;
+
+  LancamentoComCategoria({
+    required this.lancamento,
+    required this.categoria,
+  });
+}
+
 class SaldoCategoriaResult {
   final int categoriaId;
   final String nomeCategoria;
@@ -148,6 +165,67 @@ class AppDatabase extends _$AppDatabase {
       ..orderBy([(tbl) => OrderingTerm.desc(tbl.data)]);
     return query.watch();
   }
+
+  Stream<List<LancamentoComCategoria>> watchTodosLancamentos() {
+  final query = select(lancamentos).join([
+    innerJoin(categorias, categorias.id.equalsExp(lancamentos.categoriaId))
+  ])
+    ..orderBy([OrderingTerm.desc(lancamentos.data)]);
+
+  return query.watch().map((rows) {
+    return rows.map((row) {
+      return LancamentoComCategoria(
+        lancamento: row.readTable(lancamentos),
+        categoria: row.readTable(categorias),
+      );
+    }).toList();
+  });
+}
+
+Stream<List<TransacaoPorCategoriaResult>> watchGastosPorCategoria(int ano, int mes) {
+  final totalGastos = lancamentos.valor.sum();
+
+  final query = select(lancamentos).join([
+    innerJoin(categorias, categorias.id.equalsExp(lancamentos.categoriaId))
+  ])
+    ..addColumns([categorias.nome, totalGastos])
+    ..where(lancamentos.tipo.equals('compra'))
+    ..where(lancamentos.data.year.equals(ano))
+    ..where(lancamentos.data.month.equals(mes))
+    ..groupBy([categorias.id, categorias.nome]);
+
+  return query.watch().map((rows) {
+    return rows.map((row) {
+      return TransacaoPorCategoriaResult(
+        nomeCategoria: row.read(categorias.nome)!,
+        total: row.read(totalGastos) ?? 0.0,
+      );
+    }).toList();
+  });
+}
+
+Stream<List<TransacaoPorCategoriaResult>> watchVendasPorCategoria(int ano, int mes) {
+  final totalVendas = lancamentos.valor.sum();
+
+  final query = select(lancamentos).join([
+    innerJoin(categorias, categorias.id.equalsExp(lancamentos.categoriaId))
+  ])
+    ..addColumns([categorias.nome, totalVendas])
+    ..where(lancamentos.tipo.equals('venda')) // A única mudança é aqui
+    ..where(lancamentos.data.year.equals(ano))
+    ..where(lancamentos.data.month.equals(mes))
+    ..groupBy([categorias.id, categorias.nome]);
+
+  return query.watch().map((rows) {
+    return rows.map((row) {
+      return TransacaoPorCategoriaResult(
+        nomeCategoria: row.read(categorias.nome)!,
+        total: row.read(totalVendas) ?? 0.0,
+      );
+    }).toList();
+  });
+}
+
 }
 
 LazyDatabase _openConnection() {
