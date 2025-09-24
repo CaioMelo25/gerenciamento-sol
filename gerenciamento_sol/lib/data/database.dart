@@ -8,15 +8,32 @@ import 'package:path/path.dart' as p;
 part 'database.g.dart';
 
 class SaldoCategoriaResult {
+  final int categoriaId;
   final String nomeCategoria;
   final double saldo;
 
-  SaldoCategoriaResult({required this.nomeCategoria, required this.saldo});
+  SaldoCategoriaResult({
+    required this.categoriaId,
+    required this.nomeCategoria,
+    required this.saldo,
+  });
 
   @override
   String toString() {
-    return 'SaldoCategoriaResult(nome: $nomeCategoria, saldo: ${saldo.toStringAsFixed(2)})';
+    return 'SaldoCategoriaResult(id: $categoriaId, nome: $nomeCategoria, saldo: ${saldo.toStringAsFixed(2)})';
   }
+}
+
+class DashboardData {
+  final double totalVendas;
+  final double totalCompras;
+  final double saldoDoMes;
+
+  DashboardData({
+    required this.totalVendas,
+    required this.totalCompras,
+    required this.saldoDoMes,
+  });
 }
 
 class _LancamentoComCategoria {
@@ -47,26 +64,17 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 1;
 
-  @override
-  Future<void> onCreate(Migrator m) async {
-    await m.createAll();
-
-    final categoriasIniciais = [
-      'Hidratantes', 'Perfumes', 'Maquiagens',
-      'Sabonetes', 'Infantil', 'Outros'
-    ];
-
-    for (final nomeCategoria in categoriasIniciais) {
-      await into(categorias).insert(CategoriasCompanion.insert(nome: nomeCategoria));
-    }
-  }
-
   Future<void> adicionarLancamento(LancamentosCompanion entrada) {
     return into(lancamentos).insert(entrada);
   }
 
-  Future<void> limparLancamentos() {
-    return delete(lancamentos).go();
+  Future<int> deletarLancamento(int id) {
+    return (delete(lancamentos)..where((tbl) => tbl.id.equals(id))).go();
+  }
+
+  Future<int> atualizarLancamento(LancamentosCompanion entrada) {
+    return (update(lancamentos)..where((tbl) => tbl.id.equals(entrada.id.value)))
+        .write(entrada);
   }
 
   Future<double> _getTotalPorTipo(int ano, int mes, String tipo) async {
@@ -82,11 +90,25 @@ class AppDatabase extends _$AppDatabase {
 
   Future<double> getTotalVendas(int ano, int mes) => _getTotalPorTipo(ano, mes, 'venda');
   Future<double> getTotalCompras(int ano, int mes) => _getTotalPorTipo(ano, mes, 'compra');
-
+  
   Future<double> getSaldoDoMes(int ano, int mes) async {
     final totalVendas = await getTotalVendas(ano, mes);
     final totalCompras = await getTotalCompras(ano, mes);
     return totalVendas - totalCompras;
+  }
+
+  Future<DashboardData> getDashboardData(int ano, int mes) async {
+    final vendas = await getTotalVendas(ano, mes);
+    final compras = await getTotalCompras(ano, mes);
+    final saldo = await getSaldoDoMes(ano, mes);
+    return DashboardData(totalVendas: vendas, totalCompras: compras, saldoDoMes: saldo);
+  }
+  
+  Future<List<int>> getAnosComLancamentos() async {
+    final query = selectOnly(lancamentos, distinct: true)..addColumns([lancamentos.data.year]);
+    final anos = await query.map((row) => row.read(lancamentos.data.year)!).get();
+    anos.sort((a, b) => b.compareTo(a));
+    return anos;
   }
 
   Future<List<SaldoCategoriaResult>> getSaldoPorCategoria(int ano, int mes) async {
@@ -104,77 +126,34 @@ class AppDatabase extends _$AppDatabase {
         saldos[nomeCategoria] = (saldos[nomeCategoria] ?? 0) + valorComSinal;
       }
     }
-    return saldos.entries.map((e) => SaldoCategoriaResult(nomeCategoria: e.key, saldo: e.value)).toList();
+    return saldos.entries.map((entry) {
+        final categoriaId = mapaDeCategorias.entries.firstWhere((mapEntry) => mapEntry.value == entry.key).key;
+        return SaldoCategoriaResult(categoriaId: categoriaId, nomeCategoria: entry.key, saldo: entry.value);
+      }).toList();
   }
 
-  Future<DashboardData> getDashboardData(int ano, int mes) async {
-  final vendas = await getTotalVendas(ano, mes);
-  final compras = await getTotalCompras(ano, mes);
-  final saldo = await getSaldoDoMes(ano, mes);
+  Stream<DashboardData> watchDashboardData(int ano, int mes) {
+    return select(lancamentos).watch().asyncMap((_) => getDashboardData(ano, mes));
+  }
 
-  return DashboardData(
-    totalVendas: vendas,
-    totalCompras: compras,
-    saldoDoMes: saldo,
-  );
+  Stream<List<SaldoCategoriaResult>> watchSaldoPorCategoria(int ano, int mes) {
+    return select(lancamentos).watch().asyncMap((_) => getSaldoPorCategoria(ano, mes));
+  }
+  
+  Stream<List<Lancamento>> watchLancamentosPorCategoria(int ano, int mes, int categoriaId) {
+    final query = select(lancamentos)
+      ..where((tbl) => tbl.data.year.equals(ano))
+      ..where((tbl) => tbl.data.month.equals(mes))
+      ..where((tbl) => tbl.categoriaId.equals(categoriaId))
+      ..orderBy([(tbl) => OrderingTerm.desc(tbl.data)]);
+    return query.watch();
+  }
 }
-
-Stream<DashboardData> watchDashboardData(int ano, int mes) {
-  final streamDeMudancas = select(lancamentos).watch();
-
-  return streamDeMudancas.asyncMap((_) => getDashboardData(ano, mes));
-}
-
-Stream<List<SaldoCategoriaResult>> watchSaldoPorCategoria(int ano, int mes) {
-  return select(lancamentos).watch().asyncMap((_) => getSaldoPorCategoria(ano, mes));
-}
-
-Future<List<int>> getAnosComLancamentos() async {
-  final query = selectOnly(lancamentos, distinct: true)
-    ..addColumns([lancamentos.data.year]);
-
-  final anos = await query.map((row) => row.read(lancamentos.data.year)!).get();
-  anos.sort((a, b) => b.compareTo(a));
-  return anos;
-}
-
-Future<int> deletarLancamento(int id) {
-  return (delete(lancamentos)..where((tbl) => tbl.id.equals(id))).go();
-}
-
-Future<bool> atualizarLancamento(LancamentosCompanion entrada) {
-  return update(lancamentos).replace(entrada);
-}
-
-Stream<List<Lancamento>> watchLancamentosPorCategoria(int ano, int mes, int categoriaId) {
-  final query = select(lancamentos)
-    ..where((tbl) => tbl.data.year.equals(ano))
-    ..where((tbl) => tbl.data.month.equals(mes))
-    ..where((tbl) => tbl.categoriaId.equals(categoriaId))
-    ..orderBy([(tbl) => OrderingTerm.desc(tbl.data)]);
-
-  return query.watch();
-}
-
-}
-
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
+    final dbFolder = await getApplicationSupportDirectory();
     final file = File(p.join(dbFolder.path, 'db.sqlite'));
     return NativeDatabase(file);
-  });
-}
-
-class DashboardData {
-  final double totalVendas;
-  final double totalCompras;
-  final double saldoDoMes;
-
-  DashboardData({
-    required this.totalVendas,
-    required this.totalCompras,
-    required this.saldoDoMes,
   });
 }

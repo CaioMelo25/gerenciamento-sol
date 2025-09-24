@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gerenciamento_sol/data/database.dart';
-import 'package.gerenciamento_sol/presentation/transactions/add_transaction_screen.dart';
-import 'package.gerenciamento_sol/providers.dart';
-import 'package.intl/intl.dart';
+import 'package:gerenciamento_sol/presentation/transactions/add_transaction_screen.dart';
+import 'package:gerenciamento_sol/providers.dart';
+import 'package:intl/intl.dart';
 
 class TransactionDetailScreen extends ConsumerWidget {
   final int categoriaId;
@@ -58,7 +58,6 @@ class TransactionDetailScreen extends ConsumerWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Botão de Editar
                       IconButton(
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: () {
@@ -69,7 +68,6 @@ class TransactionDetailScreen extends ConsumerWidget {
                           );
                         },
                       ),
-                      // Botão de Excluir
                       IconButton(
                         icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
                         onPressed: () => _confirmarExclusao(context, database, lancamento.id),
@@ -98,7 +96,7 @@ class TransactionDetailScreen extends ConsumerWidget {
               onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
-              child: const Text('Apagar', style: TextStyle(color: Colors.red)),
+              child: Text('Apagar', style: TextStyle(color: Colors.red)),
               onPressed: () {
                 database.deletarLancamento(id);
                 Navigator.of(context).pop();

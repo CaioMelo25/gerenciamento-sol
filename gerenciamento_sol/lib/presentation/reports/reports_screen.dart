@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gerenciamento_sol/data/database.dart';
 import 'package:gerenciamento_sol/providers.dart';
+import 'package:gerenciamento_sol/presentation/reports/transaction_detail_screen.dart'; // Importe a tela de detalhes
 import 'package:intl/intl.dart';
 
 class ReportsScreen extends ConsumerWidget {
@@ -12,7 +13,7 @@ class ReportsScreen extends ConsumerWidget {
     final selectedYear = ref.watch(selectedYearProvider);
     final selectedMonth = ref.watch(selectedMonthProvider);
     final database = ref.watch(databaseProvider);
-
+    
     final dateToFormat = DateTime(selectedYear, selectedMonth);
     final formatadorDeMes = DateFormat('MMMM de yyyy', 'pt_BR');
     final mesFormatado = formatadorDeMes.format(dateToFormat);
@@ -51,7 +52,6 @@ class ReportsScreen extends ConsumerWidget {
               ],
             ),
           ),
-
           Expanded(
             child: StreamBuilder<List<SaldoCategoriaResult>>(
               stream: database.watchSaldoPorCategoria(selectedYear, selectedMonth),
@@ -68,7 +68,7 @@ class ReportsScreen extends ConsumerWidget {
                     child: Text('Nenhum lançamento encontrado para este mês.'),
                   );
                 }
-
+                
                 resultados.sort((a, b) => b.saldo.compareTo(a.saldo));
 
                 return ListView.builder(
@@ -93,6 +93,16 @@ class ReportsScreen extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => TransactionDetailScreen(
+                                categoriaId: resultado.categoriaId,
+                                categoriaNome: resultado.nomeCategoria,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gerenciamento_sol/data/database.dart';
 import 'package:gerenciamento_sol/providers.dart';
 import 'package:intl/intl.dart';
+import 'package:drift/drift.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
-  const AddTransactionScreen({super.key});
+  final Lancamento? lancamentoParaEditar;
+
+  const AddTransactionScreen({super.key, this.lancamentoParaEditar});
 
   @override
   ConsumerState<AddTransactionScreen> createState() =>
@@ -17,14 +20,35 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   final _valorController = TextEditingController();
   final _dataController = TextEditingController();
   
-  DateTime _dataSelecionada = DateTime.now();
+  late DateTime _dataSelecionada;
   Categoria? _categoriaSelecionada;
-  String _tipoSelecionado = 'venda';
+  late String _tipoSelecionado;
 
   @override
   void initState() {
     super.initState();
+    if (widget.lancamentoParaEditar != null) {
+      final l = widget.lancamentoParaEditar!;
+      _valorController.text = l.valor.toStringAsFixed(2).replaceAll('.', ',');
+      _dataSelecionada = l.data;
+      _tipoSelecionado = l.tipo;
+      _getCategoriaInicial(l.categoriaId);
+    } else {
+      _dataSelecionada = DateTime.now();
+      _tipoSelecionado = 'venda';
+    }
     _dataController.text = DateFormat('dd/MM/yyyy').format(_dataSelecionada);
+  }
+  
+  void _getCategoriaInicial(int categoriaId) async {
+    final database = ref.read(databaseProvider);
+    // Usamos .getSingleOrNull para mais segurança
+    final categoria = await (database.select(database.categorias)..where((tbl) => tbl.id.equals(categoriaId))).getSingleOrNull();
+    if (mounted) {
+      setState(() {
+        _categoriaSelecionada = categoria;
+      });
+    }
   }
 
   @override
@@ -39,7 +63,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       context: context,
       initialDate: _dataSelecionada,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)), // Permite datas futuras
     );
 
     if (dataEscolhida != null) {
@@ -55,21 +79,29 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       final database = ref.read(databaseProvider);
       final valor = double.tryParse(_valorController.text.replaceAll(',', '.')) ?? 0.0;
       
-      final novoLancamento = LancamentosCompanion.insert(
-        categoriaId: _categoriaSelecionada!.id,
-        data: _dataSelecionada,
-        valor: valor,
-        tipo: _tipoSelecionado,
+      final isEdit = widget.lancamentoParaEditar != null;
+
+      final lancamentoCompanion = LancamentosCompanion(
+        id: isEdit ? Value(widget.lancamentoParaEditar!.id) : const Value.absent(),
+        categoriaId: Value(_categoriaSelecionada!.id),
+        data: Value(_dataSelecionada),
+        valor: Value(valor),
+        tipo: Value(_tipoSelecionado),
       );
 
-      database.adicionarLancamento(novoLancamento).then((_) {
+      final future = isEdit
+          ? database.atualizarLancamento(lancamentoCompanion)
+          : database.adicionarLancamento(lancamentoCompanion);
+
+      future.then((_) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Lançamento salvo com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop();
+        // Volta para a tela inicial do app
+        Navigator.of(context).popUntil((route) => route.isFirst);
       });
     }
   }
@@ -78,10 +110,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Widget build(BuildContext context) {
     final database = ref.watch(databaseProvider);
     final textTheme = Theme.of(context).textTheme;
+    final isEdit = widget.lancamentoParaEditar != null;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_tipoSelecionado == 'venda' ? 'Nova Entrada' : 'Novo Gasto'),
+        title: Text(isEdit ? 'Editar Lançamento' : 'Novo Lançamento'),
       ),
       body: Form(
         key: _formKey,
@@ -106,15 +139,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _valorController,
-              decoration: const InputDecoration(
-                hintText: 'R\$ 0,00',
-              ),
+              decoration: const InputDecoration(hintText: 'R\$ 0,00'),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Por favor, insira um valor';
-                if (double.tryParse(value.replaceAll(',', '.')) == null) return 'Número inválido';
-                return null;
-              },
+              validator: (v) => (v == null || v.isEmpty) ? 'Insira um valor' : null,
             ),
             const SizedBox(height: 16),
 
@@ -123,7 +150,30 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             FutureBuilder<List<Categoria>>(
               future: database.select(database.categorias).get(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const SizedBox.shrink();
+                // ===== INÍCIO DO CÓDIGO DE DIAGNÓSTICO =====
+                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                  print("Categorias carregadas do banco: ${snapshot.data!.length} itens");
+                }
+                // ===== FIM DO CÓDIGO DE DIAGNÓSTICO =====
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Text('Erro ao carregar categorias: ${snapshot.error}');
+                }
+                
+                // Mostra uma mensagem clara se a lista estiver vazia
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Card(
+                    child: ListTile(
+                      leading: Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                      title: Text('Nenhuma categoria encontrada'),
+                      subtitle: Text('Tente reiniciar o app ou limpar os dados.'),
+                    ),
+                  );
+                }
+
                 final categorias = snapshot.data!;
                 return DropdownButtonFormField<Categoria>(
                   value: _categoriaSelecionada,
@@ -131,7 +181,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     hintText: 'Selecione uma categoria',
                   ),
                   items: categorias.map((c) => DropdownMenuItem(value: c, child: Text(c.nome))).toList(),
-                  onChanged: (value) => setState(() => _categoriaSelecionada = value),
+                  onChanged: (value) {
+                    setState(() {
+                      _categoriaSelecionada = value;
+                    });
+                  },
                   validator: (value) => value == null ? 'Selecione uma categoria' : null,
                 );
               },
@@ -143,16 +197,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             TextFormField(
               controller: _dataController,
               readOnly: true,
-              decoration: const InputDecoration(
-                suffixIcon: Icon(Icons.calendar_today_outlined),
-              ),
+              decoration: const InputDecoration(suffixIcon: Icon(Icons.calendar_today_outlined)),
               onTap: _selecionarData,
             ),
             const SizedBox(height: 32),
 
             ElevatedButton(
               onPressed: _salvarLancamento,
-              child: const Text('Adicionar Lançamento'),
+              child: Text(isEdit ? 'Salvar Alterações' : 'Adicionar Lançamento'),
             ),
           ],
         ),
