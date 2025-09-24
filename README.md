@@ -9,7 +9,7 @@
 
 Este projeto nasceu de uma necessidade real. Minha mãe, que é revendedora de produtos da Natura, fazia grandes compras durante o mês, mas tinha dificuldades para rastrear as vendas individuais e entender sua lucratividade. As anotações em cadernos eram insuficientes e planilhas, pouco práticas.
 
-Como engenheiro de software, vi a oportunidade perfeita de usar minhas habilidades para criar uma ferramenta que resolvesse esse problema. O "Gerenciamento Sol" foi desenvolvido do zero para ser um assistente financeiro pessoal, permitindo o registro rápido de transações e a visualização clara da saúde do negócio através de dashboards e relatórios.
+O "Gerenciamento Sol" foi desenvolvido do zero para ser um assistente financeiro pessoal, permitindo o registro rápido de transações e a visualização clara da saúde do negócio através de dashboards e relatórios.
 
 ## Funcionalidades
 
