@@ -129,7 +129,17 @@ Stream<List<SaldoCategoriaResult>> watchSaldoPorCategoria(int ano, int mes) {
   return select(lancamentos).watch().asyncMap((_) => getSaldoPorCategoria(ano, mes));
 }
 
+Future<List<int>> getAnosComLancamentos() async {
+  final query = selectOnly(lancamentos, distinct: true)
+    ..addColumns([lancamentos.data.year]);
+
+  final anos = await query.map((row) => row.read(lancamentos.data.year)!).get();
+  anos.sort((a, b) => b.compareTo(a));
+  return anos;
 }
+
+}
+
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {

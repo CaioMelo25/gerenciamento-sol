@@ -7,3 +7,8 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 
 final selectedYearProvider = StateProvider<int>((ref) => DateTime.now().year);
 final selectedMonthProvider = StateProvider<int>((ref) => DateTime.now().month);
+
+final anosProvider = FutureProvider<List<int>>((ref) {
+  final database = ref.watch(databaseProvider);
+  return database.getAnosComLancamentos();
+});
