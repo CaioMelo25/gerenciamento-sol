@@ -1,0 +1,55 @@
+venv/
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+data-engine/venv/
+data-engine/.env
+
+
+*.pdf
+*.csv
+*.sqlite
+data-engine/*.pdf
+
+# --- Mac OS Specific ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+.Spotlight-V100
+.Trashes
+
+# --- Flutter/Dart/Pub related ---
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# --- Android/IntelliJ/VS Code (Mantido e organizado) ---
+/android/app/debug
+/android/app/profile
+/android/app/release
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+
+# --- Miscellaneous ---
+*.class
+*.log
+*.pyc
+*.swp
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+app.*.symbols
+app.*.map.json
