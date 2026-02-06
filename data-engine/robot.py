@@ -48,7 +48,7 @@ def rodar_automacao():
                     corpo_html = msg.get_payload(decode=True).decode()
 
                 dados_limpos = extrair_dados_do_html(corpo_html)
-                salvar_no_banco(dados_limpos, conta["user"], data_do_email)
+                salvar_no_banco(dados_limpos, conta["user"], data_do_email, msg_id)
                 
             mail.close()
             mail.logout()

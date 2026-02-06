@@ -21,18 +21,27 @@ def mapear_categoria(nome_produto):
 
 def limpar_valor(texto):
     if not texto: return 0.0
-    match = re.search(r"([\d,.]+)", texto)
+    match = re.search(r"R\$\s*([\d,.]+)", texto)
+    
     if match:
-        valor_str = match.group(1)
-        valor_str = valor_str.strip('.,')
-        
+        valor_str = match.group(1).strip('.,')
         if ',' in valor_str:
             valor_str = valor_str.replace('.', '').replace(',', '.')
-        
         try:
             return float(valor_str)
         except ValueError:
             return 0.0
+            
+    numeros = re.findall(r"[\d,.]+", texto)
+    if numeros:
+        valor_str = numeros[-1].strip('.,')
+        if ',' in valor_str:
+            valor_str = valor_str.replace('.', '').replace(',', '.')
+        try:
+            return float(valor_str)
+        except ValueError:
+            return 0.0
+            
     return 0.0
 
 def extrair_dados_do_html(html_content):
@@ -74,14 +83,15 @@ def extrair_dados_do_html(html_content):
 
     itens = []
     for linha in soup.find_all('tr'):
-        texto_item = linha.get_text(separator=" ").strip()
-        if "R$" in texto_item:
-            proibidos = ["total", "subtotal", "consultoria", "cupom", "frete (r$)"]
-            if not any(p in texto_item.lower() for p in proibidos):
-                colunas = linha.find_all('td')
-                if len(colunas) >= 2:
+        colunas = linha.find_all('td')
+        if len(colunas) >= 2:
+            texto_linha = linha.get_text(separator=" ").strip()
+            if "R$" in texto_linha:
+                proibidos = ["total", "subtotal", "consultoria", "cupom"]
+                if not any(p in texto_linha.lower() for p in proibidos):
                     nome = colunas[0].get_text(strip=True)
-                    preco = limpar_valor(texto_item)
+                    preco = limpar_valor(colunas[-1].get_text(strip=True))
+                    
                     if preco > 0 and len(nome) > 10:
                         itens.append({"nome": nome, "preco": preco, "qtd": 1})
 
