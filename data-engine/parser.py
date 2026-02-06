@@ -12,12 +12,17 @@ supabase = create_client(url, key)
 
 def mapear_categoria(nome_produto):
     n = nome_produto.lower()
-    if any(k in n for k in ['sabonete']): return 4
-    if any(k in n for k in ['creme', 'tododia', 'mãos', 'corpo', 'hidratante']): return 1
-    if any(k in n for k in ['perfume', 'ília', 'colônia', 'essencial']): return 2
-    if any(k in n for k in ['maquiagem', 'batom', 'una', 'faces']): return 3
-    if any(k in n for k in ['mamãe', 'bebê', 'infantil']): return 5
-    return 6 
+    
+    if any(k in n for k in ['sacola', 'embalagem', 'caixa de presente', 'fita']): return 9
+    if any(k in n for k in ['mamãe', 'bebê', 'infantil', 'criança', 'naturé']): return 5
+    if any(k in n for k in ['chronos', 'antissinais', 'facial', 'rosto', 'clareador']): return 8
+    if any(k in n for k in ['lumina', 'shampoo', 'condicionador', 'máscara capilar', 'pátua', 'plant']): return 7
+    if any(k in n for k in ['perfume', 'ília', 'colônia', 'essencial', 'humor', 'kayak', 'kaiak', 'luna', 'biografia']): return 2
+    if any(k in n for k in ['maquiagem', 'batom', 'una', 'faces', 'base', 'corretivo', 'máscara para cílios']): return 3
+    if any(k in n for k in ['sabonete', 'barra', 'vegetal']): return 4
+    if any(k in n for k in ['creme', 'tododia', 'mãos', 'corpo', 'hidratante', 'desodorante', 'ekos', 'polpa', 'óleo']): return 1
+    
+    return 6
 
 def limpar_valor(texto):
     if not texto: return 0.0
