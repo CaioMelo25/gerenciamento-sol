@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gerenciamento_sol/data/database.dart';
 import 'package:gerenciamento_sol/providers.dart';
-import 'package:gerenciamento_sol/presentation/reports/transaction_detail_screen.dart'; // Importe a tela de detalhes
 import 'package:intl/intl.dart';
 
 class ReportsScreen extends ConsumerWidget {
@@ -12,106 +10,127 @@ class ReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedYear = ref.watch(selectedYearProvider);
     final selectedMonth = ref.watch(selectedMonthProvider);
-    final database = ref.watch(databaseProvider);
-    
+    final opportunitiesAsync = ref.watch(opportunityProvider);
+
     final dateToFormat = DateTime(selectedYear, selectedMonth);
     final formatadorDeMes = DateFormat('MMMM de yyyy', 'pt_BR');
     final mesFormatado = formatadorDeMes.format(dateToFormat);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Relatório por Categoria'),
+        title: const Text('Insights de Investimento'),
+        centerTitle: true,
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: () {
-                    var newDate = DateTime(selectedYear, selectedMonth - 1);
-                    ref.read(selectedYearProvider.notifier).state = newDate.year;
-                    ref.read(selectedMonthProvider.notifier).state = newDate.month;
-                  },
-                ),
-                Text(
-                  '${mesFormatado[0].toUpperCase()}${mesFormatado.substring(1)}',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: () {
-                    var newDate = DateTime(selectedYear, selectedMonth + 1);
-                    ref.read(selectedYearProvider.notifier).state = newDate.year;
-                    ref.read(selectedMonthProvider.notifier).state = newDate.month;
-                  },
-                ),
-              ],
-            ),
-          ),
+          _buildDateNavigator(context, ref, selectedYear, selectedMonth, mesFormatado),
+
+          const Divider(),
+
           Expanded(
-            child: StreamBuilder<List<SaldoCategoriaResult>>(
-              stream: database.watchSaldoPorCategoria(selectedYear, selectedMonth),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+            child: opportunitiesAsync.when(
+              data: (opportunities) {
+                if (opportunities.isEmpty) {
+                  return const Center(child: Text('Nenhum dado processado ainda.'));
                 }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Erro: ${snapshot.error}'));
-                }
-                final resultados = snapshot.data ?? [];
-                if (resultados.isEmpty) {
-                  return const Center(
-                    child: Text('Nenhum lançamento encontrado para este mês.'),
-                  );
-                }
-                
-                resultados.sort((a, b) => b.saldo.compareTo(a.saldo));
 
                 return ListView.builder(
-                  itemCount: resultados.length,
+                  itemCount: opportunities.length,
                   itemBuilder: (context, index) {
-                    final resultado = resultados[index];
-                    final corDoSaldo = resultado.saldo >= 0 ? Colors.green : Colors.red;
-                    final formatadorMoeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
-
+                    final item = opportunities[index];
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
-                        leading: Icon(
-                          resultado.saldo >= 0 ? Icons.trending_up : Icons.trending_down,
-                          color: corDoSaldo,
+                        contentPadding: const EdgeInsets.all(12),
+                        title: Text(
+                          item.nome,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        title: Text(resultado.nomeCategoria),
-                        trailing: Text(
-                          formatadorMoeda.format(resultado.saldo),
-                          style: TextStyle(
-                            color: corDoSaldo,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => TransactionDetailScreen(
-                                categoriaId: resultado.categoriaId,
-                                categoriaNome: resultado.nomeCategoria,
-                              ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text('Categoria: ${item.categoria}'),
+                            const SizedBox(height: 8),
+                            Text(
+                              item.dica,
+                              style: TextStyle(color: Colors.grey[700], fontSize: 13),
                             ),
-                          );
-                        },
+                          ],
+                        ),
+                        trailing: _buildStatusBadge(item.status),
                       ),
                     );
                   },
                 );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Erro ao conectar ao Supabase: $err')),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDateNavigator(BuildContext context, WidgetRef ref, int year, int month, String mesStr) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () {
+              var newDate = DateTime(year, month - 1);
+              ref.read(selectedYearProvider.notifier).state = newDate.year;
+              ref.read(selectedMonthProvider.notifier).state = newDate.month;
+            },
+          ),
+          Text(
+            '${mesStr[0].toUpperCase()}${mesStr.substring(1)}',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: () {
+              var newDate = DateTime(year, month + 1);
+              ref.read(selectedYearProvider.notifier).state = newDate.year;
+              ref.read(selectedMonthProvider.notifier).state = newDate.month;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color = Colors.blueGrey;
+    IconData icon = Icons.info_outline;
+
+    if (status == 'OPORTUNIDADE DE REPOSIÇÃO') {
+      color = Colors.green;
+      icon = Icons.shopping_cart_checkout;
+    } else if (status == 'PRODUTO DE BAIXO GIRO') {
+      color = Colors.orange;
+      icon = Icons.warning_amber_rounded;
+    } else if (status == 'ESTOQUE ATIVO') {
+      color = Colors.blue;
+      icon = Icons.check_circle_outline;
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          status.split(' ').last,
+          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10),
+        ),
+      ],
     );
   }
 }

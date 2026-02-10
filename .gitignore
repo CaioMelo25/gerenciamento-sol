@@ -53,3 +53,6 @@ Icon
 migrate_working_dir/
 app.*.symbols
 app.*.map.json
+
+# --- Supabase ---
+gerenciamento_sol/lib/core/supabase_config.dart
